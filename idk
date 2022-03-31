@@ -1,0 +1,60 @@
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup as soup
+
+headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:82.0) Gecko/20100101 Firefox/82.0' }
+hotel_names = []
+hotel_reviews = []
+hotel_prices = []
+hotel_ratings = []
+page = 0
+while page != 300:
+    html = requests.get(f"https://www.tripadvisor.com/Hotels-g274856-oa{page}-Warsaw_Mazovia_Province_Central_Poland-Hotels.html#BODYCON", headers = headers)
+
+    bsobj = soup(html.content, "lxml")
+
+    links = []
+    for data in bsobj.find_all('div', class_='listing_title'):
+        for a in data.find_all('a'):
+                    links.append(f"https://www.tripadvisor.com{(a.get('href'))}")
+
+
+    for link in links:
+        hotel_html = requests.get(link, headers=headers)
+        bsobj = soup(hotel_html.content, "lxml")
+
+        hotel_name = []
+        for h1 in bsobj.find_all('h1', class_='fkWsC b d Pn'):
+            hotel_name.append(h1.get_text(strip=True))
+        hotel_name = hotel_name[0]
+        hotel_names.append(hotel_name)
+
+        hotel_review = []
+        for span in bsobj.find_all('span', class_='HFUqL'):
+            hotel_review.append(span.get_text(strip=True))
+        hotel_review = hotel_review[0].split(" ")[0]
+        hotel_reviews.append(hotel_review)
+
+        hotel_price = []
+        for div in bsobj.find_all('div', class_='vyNCd b Wi'):
+            hotel_price.append(div.get_text(strip=True))
+        hotel_price = hotel_price[0].replace("PLN\xa0", "")
+        hotel_prices.append(hotel_price)
+
+        mydivs = bsobj.find_all("a", {"class": "fbhUA q eRJGA _T Gi"})
+        hotel_rating = str(mydivs[0]).split('span class="')[1][:-10][-2:]
+        hotel_rating = ",".join(list(hotel_rating))
+        hotel_ratings.append(hotel_rating)
+
+
+    page += 30
+
+
+hotel_info = {"name": hotel_names,
+              "review": hotel_reviews,
+              "price": hotel_prices,
+              "rating": hotel_ratings}
+
+df = pd.DataFrame(hotel_info, index=[0])
+
+df.to_csv("trip_advisor_lists", index=False)
