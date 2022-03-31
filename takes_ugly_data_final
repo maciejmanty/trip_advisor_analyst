@@ -1,0 +1,56 @@
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup as soup
+
+headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:82.0) Gecko/20100101 Firefox/82.0' }
+hotel_names = []
+hotel_reviews = []
+hotel_prices = []
+hotel_ratings = []
+page = 0
+while page != 300:
+    html = requests.get(f"https://www.tripadvisor.com/Hotels-g274856-oa{page}-Warsaw_Mazovia_Province_Central_Poland-Hotels.html#BODYCON", headers = headers)
+
+    bsobj = soup(html.content, "lxml")
+
+    links = []
+    for data in bsobj.find_all('div', class_='listing_title'):
+        for a in data.find_all('a'):
+                    links.append(f"https://www.tripadvisor.com{(a.get('href'))}")
+
+
+    for link in links:
+        hotel_html = requests.get(link, headers=headers)
+        bsobj = soup(hotel_html.content, "lxml")
+
+        for h1 in bsobj.find_all('h1', class_='fkWsC b d Pn'):
+            hotel_names.append(h1.get_text(strip=True))
+
+        for span in bsobj.find_all('span', class_='HFUqL'):
+            hotel_reviews.append(span.get_text(strip=True))
+
+
+        for span in bsobj.find_all('span', class_='fnypd Z1 _U'):
+            hotel_prices.append(span.get_text(strip=True))
+
+
+        for a in bsobj.find_all("a", class_="fbhUA q eRJGA _T Gi"):
+            hotel_ratings.append(a)
+
+
+
+
+    page += 30
+
+
+hotel_info = {"name": hotel_names,
+              "review": hotel_reviews,
+              "price": hotel_prices,
+              "rating": hotel_ratings}
+
+df = pd.DataFrame({"name": hotel_names})
+df["review"] = pd.Series(hotel_reviews)
+df["price"] = pd.Series(hotel_prices)
+df["rating"] = pd.Series(hotel_ratings)
+
+df.to_csv("trip_advisor_lists", index=False)
