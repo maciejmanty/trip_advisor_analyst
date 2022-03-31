@@ -1,0 +1,27 @@
+import requests
+from bs4 import BeautifulSoup as soup
+
+headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:82.0) Gecko/20100101 Firefox/82.0' }
+hotel_names = []
+page = 0
+while page != 300:
+    html = requests.get(f"https://www.tripadvisor.com/Hotels-g274856-oa{page}-Warsaw_Mazovia_Province_Central_Poland-Hotels.html#BODYCON", headers = headers)
+
+    bsobj = soup(html.content, "lxml")
+
+    links = []
+    for data in bsobj.find_all('div', class_='listing_title'):
+        for a in data.find_all('a'):
+                    links.append(f"https://www.tripadvisor.com{(a.get('href'))}")
+
+
+    for link in links:
+        hotel_html = requests.get(link, headers=headers)
+        bsobj = soup(hotel_html.content, "lxml")
+        for h1 in bsobj.find_all('h1', class_='fkWsC b d Pn'):
+            hotel_names.append(h1.get_text(strip=True))
+
+    page += 30
+
+print(hotel_names)
+print(len(hotel_names))
